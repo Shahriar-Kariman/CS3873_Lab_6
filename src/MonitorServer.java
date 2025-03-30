@@ -65,6 +65,7 @@ class MonitorServer {
             sendData = sendMsg.getBytes();
             DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, fromAddress, fromPort);
             try {
+                System.out.println("Sending: " + sendMsg);
                 serverSocket.send(sendPacket);
             } catch (IOException e) {
                 System.out.println("Error sending packet: " + e);

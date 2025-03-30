@@ -13,22 +13,24 @@ public class MonitorClient {
 
     DatagramSocket clientSocket = new DatagramSocket();
 
+    clientSocket.setSoTimeout(1000);
     for(int i=0; i<N; i++){
       byte[] message = ("Hello "+ i).getBytes();
       DatagramPacket send_packet = new DatagramPacket(message, message.length, IPAddress, PortNumber);
-
-      clientSocket.send(send_packet);
+      
       sentTimes[i] = System.currentTimeMillis();
+      clientSocket.send(send_packet);
+      System.out.println("sent request " + i);
       
       byte[] reply = new byte[1024];
       DatagramPacket replyPacket = new DatagramPacket(reply, reply.length);
       
-      clientSocket.setSoTimeout(1000);
       try {
         clientSocket.receive(replyPacket);
         long timeRecived = System.currentTimeMillis();
         int i_recieved = getI(new String(replyPacket.getData()));
         calculateRTT(i_recieved, timeRecived);
+        System.out.println("recieved " + i);
       } catch (Exception e) {
         // There was no message
       }
@@ -48,12 +50,25 @@ public class MonitorClient {
         cleranceStart = System.currentTimeMillis();
         int i_recieved = getI(new String(replyPacket.getData()));
         calculateRTT(i_recieved, cleranceStart);
+        System.out.println("recieved " + i_recieved);
       } catch (Exception e) {
         break;
       }
     }
 
     clientSocket.close();
+
+    for(int i = 0; i<N; i++){
+      String s = "Request " + i + ":";
+      if(rtts[i]<0){
+        s += " no reply";
+      }
+      else{
+        s += " RTT = " + rtts[i];
+      }
+      System.out.println(s);
+    }
+
   }
 
   private static void calculateRTT(int i, long timeRecived){
