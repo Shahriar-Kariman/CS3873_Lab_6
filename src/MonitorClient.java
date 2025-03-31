@@ -7,6 +7,7 @@ public class MonitorClient {
   private static long[] sentTimes = new long[N];
   public static void main(String[] args) throws Exception {
     Arrays.fill(rtts, -1);
+    Arrays.fill(sentTimes, -1);
     
     InetAddress IPAddress = InetAddress.getByName(args[0]);
     int PortNumber = Integer.parseInt(args[1]);
@@ -22,26 +23,26 @@ public class MonitorClient {
       clientSocket.send(send_packet);
       System.out.println("sent request " + i);
       
-      byte[] reply = new byte[1024];
-      DatagramPacket replyPacket = new DatagramPacket(reply, reply.length);
       
       try {
+        byte[] reply = new byte[1024];
+        DatagramPacket replyPacket = new DatagramPacket(reply, reply.length);
         clientSocket.receive(replyPacket);
         long timeRecived = System.currentTimeMillis();
-        int i_recieved = getI(new String(replyPacket.getData()));
+        String message_recived = new String(replyPacket.getData());
+        int i_recieved = getI(message_recived);
         calculateRTT(i_recieved, timeRecived);
-        System.out.println("recieved " + i);
       } catch (Exception e) {
+        System.err.println("Error: " + e.getMessage());
         // There was no message
       }
     }
-
-    byte[] lastRecived = new byte[1024];
-    DatagramPacket replyPacket = new DatagramPacket(lastRecived, lastRecived.length);
-
+    
     long cleranceStart = System.currentTimeMillis();
-
+    
     while (true) {
+      byte[] lastRecived = new byte[1024];
+      DatagramPacket replyPacket = new DatagramPacket(lastRecived, lastRecived.length);
       long deltaT = System.currentTimeMillis()-cleranceStart;
       long timeLeft = 5000 - deltaT;
       clientSocket.setSoTimeout((int)timeLeft);
@@ -50,7 +51,6 @@ public class MonitorClient {
         cleranceStart = System.currentTimeMillis();
         int i_recieved = getI(new String(replyPacket.getData()));
         calculateRTT(i_recieved, cleranceStart);
-        System.out.println("recieved " + i_recieved);
       } catch (Exception e) {
         break;
       }
@@ -72,11 +72,13 @@ public class MonitorClient {
   }
 
   private static void calculateRTT(int i, long timeRecived){
-    if (rtts[i]>0) return;
+    if(sentTimes[i]<0) return;
     rtts[i] = timeRecived-sentTimes[i];
   }
 
   private static int getI(String reply){
-    return Integer.parseInt(reply.split(" ")[1]);
+    String number = reply.split(" ")[1];
+    int i = Integer.parseInt(number.trim());
+    return i;
   }
 }
