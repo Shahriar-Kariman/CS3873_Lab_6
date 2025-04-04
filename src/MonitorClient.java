@@ -1,3 +1,5 @@
+import java.io.FileWriter;
+import java.io.PrintWriter;
 import java.net.*;
 import java.util.Arrays;
 
@@ -5,9 +7,21 @@ public class MonitorClient {
   private static final int N = 40;
   private static long[] rtts = new long[N];
   private static long[] sentTimes = new long[N];
+
+  private static double ALPHA = 0.125;
+  private static double BETA = 0.125;
+  private static boolean firstRTT = true;
+
+  private static double estimatedRTT;
+  private static double devRTT;
+
+  private static PrintWriter csvWriter;
+
   public static void main(String[] args) throws Exception {
     Arrays.fill(rtts, -1);
     Arrays.fill(sentTimes, -1);
+    csvWriter = new PrintWriter(new FileWriter("rtt_data.csv"));
+    csvWriter.println("request_id,sampleRTT,estimatedRTT,devRTT");
     
     InetAddress IPAddress = InetAddress.getByName(args[0]);
     int PortNumber = Integer.parseInt(args[1]);
@@ -57,6 +71,7 @@ public class MonitorClient {
     }
 
     clientSocket.close();
+    csvWriter.close();
 
     for(int i = 0; i<N; i++){
       String s = "Request " + i + ":";
@@ -74,6 +89,16 @@ public class MonitorClient {
   private static void calculateRTT(int i, long timeRecived){
     if(sentTimes[i]<0) return;
     rtts[i] = timeRecived-sentTimes[i];
+    double sampleRTT = (double) rtts[i];
+    if (firstRTT) {
+      estimatedRTT = sampleRTT;
+      devRTT = sampleRTT / 2.0;
+      firstRTT = false;
+    } else {
+      estimatedRTT = (1 - ALPHA) * estimatedRTT + ALPHA * sampleRTT;
+      devRTT = (1 - BETA) * devRTT + BETA * Math.abs(sampleRTT - estimatedRTT);
+    }
+    csvWriter.printf("%d,%.2f,%.2f,%.2f%n", i, sampleRTT, estimatedRTT, devRTT);
   }
 
   private static int getI(String reply){
